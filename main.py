@@ -45,8 +45,15 @@ def main(round_choice=None):
     send_automation_status("Started", details, round_choice=round_choice)
 
     try:
+        headless = os.getenv("HEADLESS", "1") != "0"
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=False)  # Set to True for headless mode
+            browser = p.chromium.launch(
+            headless=headless,
+            args=[
+                "--no-sandbox",                # harmless for non-root, useful under some services
+                "--disable-dev-shm-usage",     # avoids /dev/shm issues on small devices
+            ],
+        )
             page = browser.new_page()
 
             # Handle dialogs
