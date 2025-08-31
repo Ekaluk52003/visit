@@ -12,7 +12,7 @@ wheels/
 # Local secrets and runtime state
 .env
 pending_runs.json
-
+RASPBERRY_PI.md
 
 # Screenshots and images
 *.png

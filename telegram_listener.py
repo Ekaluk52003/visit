@@ -41,8 +41,8 @@ from datetime import datetime, time as dt_time, date as dt_date
 GET_UPDATES_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
 PENDING_RUNS_FILE = os.path.join(os.path.dirname(__file__), "pending_runs.json")
 # Default schedule time when queued jobs should be launched (09:30 local server time)
-SCHEDULE_HOUR = 16
-SCHEDULE_MINUTE = 16
+SCHEDULE_HOUR = 9
+SCHEDULE_MINUTE = 30
 SCHEDULER_WAKE_SEC = 30  # how often scheduler checks the queue
 
 # Shared process handle for the currently running automation (module scope)
@@ -201,6 +201,11 @@ def main():
                 chosen_round = cmd_arg if (cmd_arg and cmd_arg.isdigit()) else None
 
                 # Decide whether to queue or run immediately based on schedule
+
+                # -Before 09:30 (e.g., 08:00 the same day chat ): queues for today at 09:30.
+                # -After 09:30 (e.g., 23:00 the same day chat): runs immediately.
+                # -After 09:30 (e.g., 10:00 the same day chat): runs immediately.
+
                 now = datetime.now()
                 target_dt = datetime.combine(now.date(), dt_time(SCHEDULE_HOUR, SCHEDULE_MINUTE))
 
