@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# Local secrets and runtime state
+.env
+pending_runs.json
 # Configuration (contains sensitive Telegram credentials)
 config.py
 

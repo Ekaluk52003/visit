@@ -58,7 +58,7 @@ def send_dialog_alert(dialog_type, dialog_message, timestamp=None):
 
     return send_telegram_message(formatted_message)
 
-def send_automation_status(status, details=""):
+def send_automation_status(status, details="", round_choice=None):
     """
     Send automation status updates to Telegram
 
@@ -83,6 +83,9 @@ def send_automation_status(status, details=""):
 <b>Status:</b> {status}
 <b>Time:</b> {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
 """
+
+    if round_choice is not None:
+        message += f"<b>Round:</b> {round_choice}\n"
 
     if details:
         message += f"<b>Details:</b> {details}\n"

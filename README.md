@@ -65,8 +65,8 @@ uv run playwright install
 
 1. **Edit `config.py`** and replace the placeholder values:
    ```python
-   TELEGRAM_BOT_TOKEN = "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"  # Your actual bot token
-   TELEGRAM_CHAT_ID = "123456789"  # Your actual chat ID
+   TELEGRAM_BOT_TOKEN = ""  # Your actual bot token
+   TELEGRAM_CHAT_ID = ""  # Your actual chat ID
    ```
 
 #### Test Your Configuration
@@ -112,15 +112,6 @@ Sent at key automation milestones:
 ### 3. Custom Messages 💬
 You can send custom messages using the helper functions in your code.
 
-## Quick configuration
-
-- To run headless, edit `main.py` and set `p.chromium.launch(headless=True)`.
-- To change the ID values or phone number, edit these lines in `main.py`:
-	- `page.fill("#idno", "4130300003031")`
-	- `page.fill("#search_idno", "4130300003023")`
-	- `page.fill("#mobile", "0991795649")`
-- To customize Telegram messages, edit `telegram_helper.py`
-- For security, you can use environment variables instead of hardcoding credentials in `config.py`
 
 ## Security Best Practices
 
@@ -184,3 +175,51 @@ If you want, I can:
 
 Generated on: Aug 31, 2025
 ```
+
+## Webhook (ngrok) setup
+
+If you prefer Telegram webhooks over long-polling, you can expose the local `telegram_webhook.py` server using ngrok and tell Telegram to send updates to the public HTTPS URL.
+
+1. Download or install ngrok (https://ngrok.com/) and sign in to get your auth token.
+
+2. Start the webhook server locally (default port 8000):
+
+```powershell
+# from project root
+python telegram_webhook.py
+```
+
+3. In a separate terminal, start ngrok to forward HTTPS to the webhook port:
+
+```powershell
+ngrok http 8000
+```
+
+4. In the ngrok output you'll see a forwarding HTTPS URL like `https://abcd-1234.ngrok.io`.
+
+5. Set the Telegram webhook for your bot (replace <YOUR_BOT_TOKEN> and <NGROK_HOST>):
+
+```powershell
+# example using curl (PowerShell)
+$ngrokUrl = "https://abcd-1234.ngrok.io"  # replace with your ngrok https URL
+$botToken = "<YOUR_BOT_TOKEN>"
+$webhookUrl = "$ngrokUrl/webhook"
+curl -X POST "https://api.telegram.org/bot$botToken/setWebhook" -F "url=$webhookUrl"
+```
+
+6. (Optional) If you enabled `TELEGRAM_WEBHOOK_SECRET` in `config.py` or set it as an environment variable, add the secret when setting the webhook so Telegram includes it in the `X-Telegram-Bot-Api-Secret-Token` header:
+
+```powershell
+$secret = "mysecretvalue"
+curl -X POST "https://api.telegram.org/bot$botToken/setWebhook" -F "url=$webhookUrl" -F "secret_token=$secret"
+```
+
+7. Test by sending a message to your bot. The webhook server will receive the update and handle commands as described above.
+
+To remove the webhook and revert to getUpdates/polling, use:
+
+```powershell
+curl "https://api.telegram.org/bot$botToken/deleteWebhook"
+```
+
+Security note: webhook URLs must be HTTPS. Use ngrok (or a hosted HTTPS endpoint). Keep your bot token and optional secret private.

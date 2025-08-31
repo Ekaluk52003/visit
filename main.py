@@ -2,12 +2,47 @@ from playwright.sync_api import sync_playwright
 from datetime import datetime, timedelta
 import time
 from telegram_helper import send_dialog_alert, send_automation_status
+import sys
+import os
+from pathlib import Path
 
-def main():
+# Load runtime configuration from .env or environment variables.
+ENV_PATH = Path(__file__).parent / ".env"
+if ENV_PATH.exists():
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(dotenv_path=ENV_PATH)
+    except Exception:
+        try:
+            with open(ENV_PATH, "r", encoding="utf-8") as fh:
+                for ln in fh:
+                    ln = ln.strip()
+                    if not ln or ln.startswith("#"):
+                        continue
+                    if "=" in ln:
+                        k, v = ln.split("=", 1)
+                        v = v.strip().strip('"').strip("'")
+                        os.environ.setdefault(k.strip(), v)
+        except Exception:
+            pass
+
+# Values used by the automation (can be set via .env or environment):
+VISIT_URL = os.getenv(
+    "VISIT_URL"
+)
+ID_CARD1 = os.getenv("ID_CARD1")
+ID_CARD2 = os.getenv("ID_CARD2")
+MOBILE = os.getenv("MOBILE")
+
+def main(round_choice=None):
     url = "http://visitbrp.com/%E0%B8%A3%E0%B8%B0%E0%B8%9A%E0%B8%9A%E0%B8%88%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%A2%E0%B8%B5%E0%B9%88%E0%B8%A2%E0%B8%A1%E0%B8%8D%E0%B8%B2%E0%B8%95%E0%B8%B4/"
 
-    # Send automation start notification
-    send_automation_status("Started", "Beginning VisitBRP automation process")
+    # Send automation start notification (include round if provided)
+    details = "Beginning VisitBRP automation process"
+    if round_choice:
+        details += f" (round={round_choice})"
+    send_automation_status("Started", details, round_choice=round_choice)
 
     try:
         with sync_playwright() as p:
@@ -49,7 +84,7 @@ def main():
             page.wait_for_selector("#idno")
 
             # Fill the input with the specified value
-            page.fill("#idno", "4130300003031")
+            page.fill("#idno", ID_CARD1)
 
             # Wait for the submit button to be available
             page.wait_for_selector("input.submit")
@@ -72,7 +107,7 @@ def main():
             page.wait_for_selector("#search_idno")
 
             # Fill the search input with the specified value
-            page.fill("#search_idno", "4130300003023")
+            page.fill("#search_idno", ID_CARD2)
             page.locator("input[value='เพิ่ม']").click()
 
 
@@ -93,26 +128,32 @@ def main():
             # Click outside the select to trigger any JavaScript
             page.locator("body").click()
             page.wait_for_selector("#round")
-            page.select_option("#round", '2')
+            # Use provided round_choice if given, otherwise fall back to '2'
+            sel_round = str(round_choice) if round_choice else '2'
+            page.select_option("#round", sel_round)
 
-            page.fill("#mobile", "0991795649")
+            page.fill("#mobile", MOBILE)
             page.locator("body").click()
                    # Click the confirm button
             page.locator("input[value='ตกลง']").click()
 
             # Optionally, keep the browser open for a moment to see the result
-            page.wait_for_timeout(60000)  # Wait 60 seconds
+            page.wait_for_timeout(5000)  # Wait 5 seconds
 
             # Send completion notification
-            send_automation_status("Completed", "VisitBRP automation finished successfully")
+            send_automation_status("Completed", "VisitBRP automation finished successfully", round_choice=round_choice)
 
             browser.close()
 
     except Exception as e:
         error_message = f"Automation failed with error: {str(e)}"
         print(f"Error: {error_message}")
-        send_automation_status("Error", error_message)
+        send_automation_status("Error", error_message, round_choice=round_choice)
         raise
 
 if __name__ == "__main__":
-    main()
+    # Optional positional argument: round value (e.g. python main.py 2)
+    arg = None
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+    main(arg)
