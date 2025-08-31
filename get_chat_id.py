@@ -6,9 +6,31 @@ Run this after sending a message to your bot
 
 import requests
 import json
+import os
+from pathlib import Path
 
-# Your bot token (already configured)
-BOT_TOKEN = "8061689089:AAHWzPbQP-Re6cS24yqNDEsSvy-gubj9Idg"
+# Your bot token is read from environment/.env via config.py
+# Prefer importing from config to keep a single source of truth.
+try:
+    from config import TELEGRAM_BOT_TOKEN as BOT_TOKEN  # loads .env inside config
+except Exception:
+    # Lightweight fallback .env loader (no external deps)
+    def _load_dotenv(path: Path):
+        if path.exists():
+            for raw in path.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+    _load_dotenv(Path(__file__).resolve().parent / ".env")
+    BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+if not BOT_TOKEN:
+    print("❌ TELEGRAM_BOT_TOKEN is missing. Set it in .env or environment.")
+    print("   Example .env line: TELEGRAM_BOT_TOKEN=123456:ABC-DEF...")
+    raise SystemExit(1)
 
 def get_chat_id():
     """Get the chat ID from recent messages to your bot"""
