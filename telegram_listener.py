@@ -41,8 +41,8 @@ from datetime import datetime, time as dt_time, date as dt_date
 GET_UPDATES_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
 PENDING_RUNS_FILE = os.path.join(os.path.dirname(__file__), "pending_runs.json")
 # Default schedule time when queued jobs should be launched (09:30 local server time)
-SCHEDULE_HOUR = 15
-SCHEDULE_MINUTE = 7
+SCHEDULE_HOUR = 16
+SCHEDULE_MINUTE = 9
 SCHEDULER_WAKE_SEC = 30  # how often scheduler checks the queue
 
 # Shared process handle for the currently running automation (module scope)
