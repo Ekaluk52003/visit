@@ -1,6 +1,7 @@
 import requests
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_CHAT_IDS
 from datetime import datetime
+
 
 def send_telegram_message(message):
     """
@@ -14,25 +15,37 @@ def send_telegram_message(message):
     """
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": message,
-            "parse_mode": "HTML"  # Allows basic HTML formatting
-        }
+        chat_ids = TELEGRAM_CHAT_IDS if TELEGRAM_CHAT_IDS else (
+            [TELEGRAM_CHAT_ID] if TELEGRAM_CHAT_ID else [])
 
-        response = requests.post(url, json=payload, timeout=10)
+        # If no chat ids configured, log and skip
+        if not chat_ids:
+            print("ℹ️ No TELEGRAM_CHAT_ID(S) configured; skipping send.")
+            return False
 
-        if response.status_code == 200:
+        ok_any = False
+        for cid in chat_ids:
+            payload = {
+                "chat_id": cid,
+                "text": message,
+                "parse_mode": "HTML"  # Allows basic HTML formatting
+            }
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code == 200:
+                ok_any = True
+            else:
+                print(f"❌ Failed to send to {cid}: {response.status_code}")
+                print(f"Response: {response.text}")
+
+        if ok_any:
             print("✅ Message sent to Telegram successfully")
             return True
-        else:
-            print(f"❌ Failed to send message to Telegram: {response.status_code}")
-            print(f"Response: {response.text}")
-            return False
+        return False
 
     except Exception as e:
         print(f"❌ Error sending message to Telegram: {str(e)}")
         return False
+
 
 def send_dialog_alert(dialog_type, dialog_message, timestamp=None):
     """
@@ -57,6 +70,7 @@ def send_dialog_alert(dialog_type, dialog_message, timestamp=None):
     """.strip()
 
     return send_telegram_message(formatted_message)
+
 
 def send_automation_status(status, details="", round_choice=None):
     """

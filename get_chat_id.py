@@ -22,7 +22,8 @@ except Exception:
                 if not line or line.startswith("#") or "=" not in line:
                     continue
                 k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+                os.environ.setdefault(
+                    k.strip(), v.strip().strip('"').strip("'"))
 
     _load_dotenv(Path(__file__).resolve().parent / ".env")
     BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -31,6 +32,7 @@ if not BOT_TOKEN:
     print("❌ TELEGRAM_BOT_TOKEN is missing. Set it in .env or environment.")
     print("   Example .env line: TELEGRAM_BOT_TOKEN=123456:ABC-DEF...")
     raise SystemExit(1)
+
 
 def get_chat_id():
     """Get the chat ID from recent messages to your bot"""
@@ -53,7 +55,8 @@ def get_chat_id():
         data = response.json()
 
         if not data.get('ok'):
-            print(f"❌ Telegram API error: {data.get('description', 'Unknown error')}")
+            print(
+                f"❌ Telegram API error: {data.get('description', 'Unknown error')}")
             return
 
         updates = data.get('result', [])
@@ -92,7 +95,8 @@ def get_chat_id():
             print("🔧 Or run this command to update config.py automatically:")
             print(f"python -c \"")
             print(f"with open('config.py', 'r') as f: content = f.read(); ")
-            print(f"content = content.replace('YOUR_CHAT_ID_HERE', '{chat_id}'); ")
+            print(
+                f"content = content.replace('YOUR_CHAT_ID_HERE', '{chat_id}'); ")
             print(f"with open('config.py', 'w') as f: f.write(content)\"")
 
         else:
@@ -106,6 +110,7 @@ def get_chat_id():
 
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
+
 
 if __name__ == "__main__":
     get_chat_id()

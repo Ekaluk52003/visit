@@ -23,7 +23,7 @@ import os
 from typing import Optional
 
 try:
-    from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+    from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_CHAT_IDS
 except Exception as e:
     # Config may raise a RuntimeError when required env vars are missing.
     print("Configuration error while loading `config.py`:", str(e))
@@ -39,7 +39,8 @@ import threading
 from datetime import datetime, time as dt_time, date as dt_date
 
 GET_UPDATES_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
-PENDING_RUNS_FILE = os.path.join(os.path.dirname(__file__), "pending_runs.json")
+PENDING_RUNS_FILE = os.path.join(
+    os.path.dirname(__file__), "pending_runs.json")
 # Default schedule time when queued jobs should be launched (09:30 local server time)
 SCHEDULE_HOUR = 9
 SCHEDULE_MINUTE = 30
@@ -54,7 +55,8 @@ def fetch_updates(offset: Optional[int] = None, timeout: int = 20):
     if offset is not None:
         params["offset"] = offset
     try:
-        resp = requests.get(GET_UPDATES_URL, params=params, timeout=timeout + 10)
+        resp = requests.get(GET_UPDATES_URL, params=params,
+                            timeout=timeout + 10)
         resp.raise_for_status()
         return resp.json().get("result", [])
     except requests.exceptions.RequestException as e:
@@ -114,7 +116,8 @@ def process_pending_runs_loop():
         try:
             now = datetime.now()
             today_str = now.date().isoformat()
-            target_dt = datetime.combine(now.date(), dt_time(SCHEDULE_HOUR, SCHEDULE_MINUTE))
+            target_dt = datetime.combine(
+                now.date(), dt_time(SCHEDULE_HOUR, SCHEDULE_MINUTE))
             if now >= target_dt:
                 pending = load_pending_runs()
                 remaining = []
@@ -134,10 +137,13 @@ def process_pending_runs_loop():
 
                         round_choice = job.get("round")
                         try:
-                            print(f"Launching scheduled run (round={round_choice}) from pending queue")
-                            new_proc = start_automation_subprocess(round_choice)
+                            print(
+                                f"Launching scheduled run (round={round_choice}) from pending queue")
+                            new_proc = start_automation_subprocess(
+                                round_choice)
                             globals()['current_proc'] = new_proc
-                            send_telegram_message(f"Scheduled automation launched (round={round_choice}).")
+                            send_telegram_message(
+                                f"Scheduled automation launched (round={round_choice}).")
                         except Exception as e:
                             print(f"Failed to launch scheduled job: {e}")
                             # keep the job to try again later
@@ -153,7 +159,8 @@ def process_pending_runs_loop():
 def main():
     print("Telegram listener starting...")
     # start background scheduler thread
-    scheduler_thread = threading.Thread(target=process_pending_runs_loop, daemon=True)
+    scheduler_thread = threading.Thread(
+        target=process_pending_runs_loop, daemon=True)
     scheduler_thread.start()
     # On startup, fetch any pending updates and advance the offset so we don't
     # immediately process old messages that were sent before the listener started.
@@ -162,7 +169,8 @@ def main():
         pending = fetch_updates(timeout=1)
         if pending:
             last_update_id = pending[-1].get("update_id")
-            print(f"Found {len(pending)} pending update(s). Ignoring backlog up to update_id {last_update_id}.")
+            print(
+                f"Found {len(pending)} pending update(s). Ignoring backlog up to update_id {last_update_id}.")
             print("If you want to process past messages instead, remove this startup-skip logic or run clear_updates.py first.")
     except Exception as e:
         print(f"Warning: failed to inspect pending updates on startup: {e}")
@@ -171,7 +179,8 @@ def main():
     current_proc = None
 
     while True:
-        updates = fetch_updates(offset=(last_update_id + 1) if last_update_id is not None else None, timeout=30)
+        updates = fetch_updates(
+            offset=(last_update_id + 1) if last_update_id is not None else None, timeout=30)
 
         for update in updates:
             last_update_id = update.get("update_id", last_update_id)
@@ -186,8 +195,12 @@ def main():
 
             print(f"Received message from chat {chat_id}: {text}")
 
-            # If TELEGRAM_CHAT_ID is set, only accept messages from that chat
-            if TELEGRAM_CHAT_ID and str(TELEGRAM_CHAT_ID) != chat_id:
+            # Accept messages based on configured chat ids
+            allowed_ids = set(TELEGRAM_CHAT_IDS) if 'TELEGRAM_CHAT_IDS' in globals() and TELEGRAM_CHAT_IDS else (
+                {str(TELEGRAM_CHAT_ID)} if TELEGRAM_CHAT_ID else set()
+            )
+            # If any allowed ids configured and chat is not in the set, ignore
+            if allowed_ids and chat_id not in allowed_ids:
                 print(f"Ignoring message from unknown chat {chat_id}")
                 continue
 
@@ -198,7 +211,8 @@ def main():
 
             if cmd_word and cmd_word in ("/start", "start", "run"):
                 # parse numeric arg if present
-                chosen_round = cmd_arg if (cmd_arg and cmd_arg.isdigit()) else None
+                chosen_round = cmd_arg if (
+                    cmd_arg and cmd_arg.isdigit()) else None
 
                 # Decide whether to queue or run immediately based on schedule
 
@@ -207,7 +221,8 @@ def main():
                 # -After 09:30 (e.g., 10:00 the same day chat): runs immediately.
 
                 now = datetime.now()
-                target_dt = datetime.combine(now.date(), dt_time(SCHEDULE_HOUR, SCHEDULE_MINUTE))
+                target_dt = datetime.combine(
+                    now.date(), dt_time(SCHEDULE_HOUR, SCHEDULE_MINUTE))
 
                 if now < target_dt:
                     # queue for today's scheduled time
@@ -223,12 +238,14 @@ def main():
                         # Inform user which round value will be used
                         if chosen_round:
                             reply = f"Starting automation now (round={chosen_round})..."
-                            current_proc = start_automation_subprocess(chosen_round)
+                            current_proc = start_automation_subprocess(
+                                chosen_round)
                         else:
                             reply = "Starting automation now (round=default)..."
                             current_proc = start_automation_subprocess()
                         send_telegram_message(reply)
-                        send_telegram_message("Automation launched (background process). I'll notify you when it finishes.")
+                        send_telegram_message(
+                            "Automation launched (background process). I'll notify you when it finishes.")
 
             elif cmd_word and cmd_word in ("/pending", "pending"):
                 pending = load_pending_runs()
@@ -237,7 +254,8 @@ def main():
                 else:
                     lines = ["Pending scheduled runs:"]
                     for i, job in enumerate(pending, start=1):
-                        lines.append(f"{i}. scheduled_for={job.get('scheduled_for')} round={job.get('round') or 'default'} requested_at={job.get('requested_at')}")
+                        lines.append(
+                            f"{i}. scheduled_for={job.get('scheduled_for')} round={job.get('round') or 'default'} requested_at={job.get('requested_at')}")
                     send_telegram_message("\n".join(lines))
 
             elif cmd_word and cmd_word in ("/cancel", "cancel"):
@@ -248,24 +266,30 @@ def main():
                     if 0 <= idx < len(pending):
                         job = pending.pop(idx)
                         save_pending_runs(pending)
-                        send_telegram_message(f"Cancelled pending run {idx+1} (round={job.get('round') or 'default'}).")
+                        send_telegram_message(
+                            f"Cancelled pending run {idx+1} (round={job.get('round') or 'default'}).")
                     else:
-                        send_telegram_message(f"Invalid index. There are {len(pending)} pending jobs.")
+                        send_telegram_message(
+                            f"Invalid index. There are {len(pending)} pending jobs.")
                 else:
-                    send_telegram_message("Usage: /cancel N  (where N is the job number from /pending)")
+                    send_telegram_message(
+                        "Usage: /cancel N  (where N is the job number from /pending)")
 
             elif text and text.strip().lower() in ("/status", "status"):
                 if current_proc is not None and current_proc.poll() is None:
                     send_telegram_message("Automation is currently running.")
                 else:
-                    send_telegram_message("No automation is running right now.")
+                    send_telegram_message(
+                        "No automation is running right now.")
 
             elif text and text.strip().lower() in ("/stop", "stop"):
                 if current_proc is not None and current_proc.poll() is None:
                     current_proc.terminate()
-                    send_telegram_message("Requested to stop the automation process.")
+                    send_telegram_message(
+                        "Requested to stop the automation process.")
                 else:
-                    send_telegram_message("No running automation process to stop.")
+                    send_telegram_message(
+                        "No running automation process to stop.")
 
             else:
                 # Default behavior: any message triggers start (optional). We'll treat any non-command as start.
@@ -279,7 +303,8 @@ def main():
                         send_telegram_message(reply)
                         try:
                             current_proc = start_automation_subprocess()
-                            send_telegram_message("Automation launched (background process).")
+                            send_telegram_message(
+                                "Automation launched (background process).")
                         except Exception as e:
                             err = f"Failed to start automation: {e}"
                             print(err)
