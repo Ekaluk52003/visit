@@ -1,6 +1,6 @@
-(# VisitBRP Playwright Automation
+(# VisitBRP Playwright Automation with Telegram Integration
 
-This repository contains a small Playwright-based Python automation that navigates the VisitBRP booking flow and exercises the UI to select a prisoner, fill ID fields, and submit the form. It was scaffolded using `uv` and Playwright.
+This repository contains a Playwright-based Python automation that navigates the VisitBRP booking flow and exercises the UI to select a prisoner, fill ID fields, and submit the form. It now includes **Telegram bot integration** to send real-time notifications about dialog messages and automation status.
 
 ## What this project does
 
@@ -9,16 +9,26 @@ This repository contains a small Playwright-based Python automation that navigat
 - Fills visitor ID fields and submits the booking flow.
 - Interacts with search/add dialogs and selects a visit round (calculated as tomorrow's day).
 - Captures screenshots at important steps and prints dialog messages to the console.
+- **NEW**: Sends real-time notifications to your Telegram bot when dialogs appear or automation status changes.
 
-Files of interest
-- `main.py` — the Playwright script (single-file automation).
-- `after_first_submit.png`, `alert_screenshot.png`, `after_final_click.png` — screenshots produced by the script when running (if the script triggers them).
+## Files of interest
+
+- `main.py` — the Playwright script (single-file automation) with Telegram integration.
+- `telegram_helper.py` — Telegram bot helper functions for sending notifications.
+- `config.py` — Configuration file for Telegram bot credentials.
+- `test_telegram.py` — Test script to verify Telegram bot functionality.
+- `after_first_submit.png`, `alert_screenshot.png`, `after_final_click.png` — screenshots produced by the script when running.
 
 ## Prerequisites
 
 - Windows with PowerShell (instructions below use your default `pwsh`).
 - Python 3.11 (or similar supported by Playwright/uv).
 - `uv` (the project tool used in this workspace) — used here to manage the virtual env and dependencies.
+- **Telegram bot token and chat ID** (see setup instructions below).
+
+## Setup Instructions
+
+### 1. Prepare the Python Environment
 
 If you haven't already prepared the project, run these commands from the project root (`d:\python\visit`) in PowerShell:
 
@@ -26,12 +36,48 @@ If you haven't already prepared the project, run these commands from the project
 # initialize project (if not yet initialized)
 uv init
 
-# add Playwright to the project and create a .venv
-uv add playwright
+# add dependencies to the project and create a .venv
+uv add playwright requests
 
 # install Playwright browsers
 uv run playwright install
 ```
+
+### 2. Set Up Telegram Bot (NEW)
+
+#### Create a Telegram Bot
+
+1. **Open Telegram** and search for `@BotFather`
+2. **Send `/newbot`** command to BotFather
+3. **Follow the prompts** to choose a name and username for your bot
+4. **Save the bot token** that BotFather provides (looks like `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+
+#### Get Your Chat ID
+
+1. **Send a message** to your newly created bot (any message)
+2. **Visit this URL** in your browser (replace `YOUR_BOT_TOKEN` with your actual token):
+   ```
+   https://api.telegram.org/botYOUR_BOT_TOKEN/getUpdates
+   ```
+3. **Find your chat ID** in the JSON response (look for `"chat":{"id":YOUR_CHAT_ID}`)
+
+#### Configure the Bot
+
+1. **Edit `config.py`** and replace the placeholder values:
+   ```python
+   TELEGRAM_BOT_TOKEN = "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"  # Your actual bot token
+   TELEGRAM_CHAT_ID = "123456789"  # Your actual chat ID
+   ```
+
+#### Test Your Configuration
+
+Run the test script to verify everything is working:
+
+```powershell
+uv run python test_telegram.py
+```
+
+You should receive test messages in your Telegram chat. If the test fails, double-check your bot token and chat ID.
 
 ## Run the automation
 
@@ -41,7 +87,30 @@ From the repository root run:
 uv run python main.py
 ```
 
-This launches Chromium (by default in non-headless mode) and walks through the booking steps. The script prints dialog messages to the console when a browser alert appears and saves screenshots for debugging.
+This launches Chromium (by default in non-headless mode) and walks through the booking steps. The script:
+- Sends a "Started" notification to Telegram when automation begins
+- Sends dialog alerts to Telegram whenever browser dialogs appear
+- Sends a "Completed" notification when automation finishes successfully
+- Sends error notifications if anything goes wrong
+
+## Telegram Features
+
+The integration provides three types of notifications:
+
+### 1. Dialog Alerts 🚨
+Sent whenever the automation encounters a browser dialog (alert, confirm, etc.):
+- Dialog type and message
+- Timestamp
+- Automatic handling notification
+
+### 2. Status Updates 🚀
+Sent at key automation milestones:
+- ✅ Started: When automation begins
+- ✅ Completed: When automation finishes successfully
+- ❌ Error: If automation encounters an error
+
+### 3. Custom Messages 💬
+You can send custom messages using the helper functions in your code.
 
 ## Quick configuration
 
@@ -50,6 +119,36 @@ This launches Chromium (by default in non-headless mode) and walks through the b
 	- `page.fill("#idno", "4130300003031")`
 	- `page.fill("#search_idno", "4130300003023")`
 	- `page.fill("#mobile", "0991795649")`
+- To customize Telegram messages, edit `telegram_helper.py`
+- For security, you can use environment variables instead of hardcoding credentials in `config.py`
+
+## Security Best Practices
+
+### Using Environment Variables (Recommended)
+
+Instead of hardcoding credentials in `config.py`, you can use environment variables:
+
+1. **Set environment variables** in PowerShell:
+   ```powershell
+   $env:TELEGRAM_BOT_TOKEN = "your_bot_token_here"
+   $env:TELEGRAM_CHAT_ID = "your_chat_id_here"
+   ```
+
+2. **Update `config.py`**:
+   ```python
+   import os
+   TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "fallback_token")
+   TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "fallback_chat_id")
+   ```
+
+### .gitignore
+
+Make sure to add `config.py` to your `.gitignore` file if you're using version control:
+```
+config.py
+*.png
+.venv/
+```
 
 ## How the script handles alerts and dialogs
 
