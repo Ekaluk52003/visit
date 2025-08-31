@@ -145,7 +145,7 @@ def main(round_choice=None):
             page.locator("input[value='ตกลง']").click()
 
             # Optionally, keep the browser open for a moment to see the result
-            page.wait_for_timeout(5000)  # Wait 5 seconds
+            page.wait_for_timeout(2000)  # Wait 2 seconds
 
             # Send completion notification
             send_automation_status("Completed", "VisitBRP automation finished successfully", round_choice=round_choice)
