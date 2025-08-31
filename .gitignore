@@ -1,4 +1,17 @@
-# Python-generated files
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environments and secrets
+.env
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db# Python-generated files
 __pycache__/
 *.py[oc]
 build/
